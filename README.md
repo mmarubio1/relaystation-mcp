@@ -9,8 +9,10 @@ Relaystation is a prepaid storage and utility provider for agents and developers
 with [x402](https://www.x402.org) (EIP-3009 USDC/EURC on Base — the wallet is the identity, no
 account required) or a prepaid balance. No subscription, no minimum, no commitment.
 
-This repo describes the **hosted** server and how to connect. There is nothing to install or
-self-host — the server runs at the URL above.
+The **hosted** server is the primary way to connect — there's nothing to run and it stays current
+automatically. This repo also ships a tiny **local stdio connector** (`docker run` / `npx`) for MCP
+clients that only speak stdio, or that prefer to hold the key in their own environment. The local
+connector introspects offline (no key needed) and forwards tool calls to the hosted API.
 
 ## Capabilities
 
@@ -64,6 +66,45 @@ https://api.relaystation.ai/mcp?key=rs_live_...
 ```
 
 Sign up and mint a key at <https://app.relaystation.ai>.
+
+### Local stdio connector (Docker / npx)
+
+For clients that only support stdio servers, run the connector locally. It serves the hot-set tool
+definitions (generated from <https://api.relaystation.ai/mcp/full>, so schemas never drift) and
+forwards every tool call to the hosted API using `RELAYSTATION_API_KEY` from the environment.
+Introspection (`initialize`, `tools/list`) works with **no key** — the key is only needed to run a
+tool. Mint one at <https://app.relaystation.ai>.
+
+**Docker:**
+
+```bash
+docker build -t relaystation-mcp .
+docker run --rm -i -e RELAYSTATION_API_KEY=rs_live_... relaystation-mcp
+```
+
+**npx** (once published to npm):
+
+```bash
+npx relaystation-mcp
+```
+
+MCP client config (stdio):
+
+```json
+{
+  "mcpServers": {
+    "relaystation": {
+      "command": "npx",
+      "args": ["-y", "relaystation-mcp"],
+      "env": { "RELAYSTATION_API_KEY": "rs_live_..." }
+    }
+  }
+}
+```
+
+Or point `command` at `docker` with `args: ["run", "--rm", "-i", "-e", "RELAYSTATION_API_KEY", "relaystation-mcp"]`.
+
+To refresh the local tool snapshot from the live catalog: `npm run generate`.
 
 ### x402 per call (no account)
 
